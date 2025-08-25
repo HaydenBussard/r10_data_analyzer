@@ -12,7 +12,7 @@ import pandas as pd
 import numpy as np
 from datetime import datetime
 
-# Realistic distance ranges for each club type (yards)
+# Set your realistic distance ranges for each club (units will be what you use in the Garmin Golf app)
 CLUB_RANGES = {
     "Driver": (0, 400),
     "3 Wood": (0, 400),
@@ -53,7 +53,7 @@ def get_shot_shape(face_to_path, spin_axis):
         spin_axis (float): Club's average spin axis
         
     Returns:
-        str: Shot shape description (Draw/Fade)
+        str: Shot shape description (Draw/Fade/Hook/Slice)
     """
     # Determine draw/hook
     if spin_axis < -3:
@@ -106,10 +106,10 @@ def get_risk_level(deviation_lr, deviation_stddev):
         return "High Risk"
 
 def load_session_data(folder_path):
-    """Load all Excel session files from the specified folder.
+    """Load all Excel/CSV session files from the specified folder.
     
     Args:
-        folder_path (str): Path to folder containing Garmin R10 Excel exports
+        folder_path (str): Path to folder containing Garmin R10 Excel/CSV exports
         
     Returns:
         pd.DataFrame: Combined data from all session files
@@ -150,7 +150,15 @@ def filter_club_data(df, club_ranges):
     return filtered_data
 
 def calculate_weights(df, decay_factor):
-    """Calculate weights based on recency order (not actual dates)."""
+    """Calculate weights by recency.
+
+    Args:
+        df (pd.DataFrame): Data to analyze
+        decay_factor: DECAY_FACTOR variable for weight distribution
+
+    Returns:
+        df (pd.DataFrame): same data with assigned weight values for shots
+    """
     df = df.sort_values(by='Date').reset_index(drop=True)
     df['recency_rank'] = range(len(df)-1, -1, -1)
     df['weight'] = np.exp(-decay_factor * df['recency_rank'])
@@ -211,10 +219,10 @@ def analyze_club_performance(filtered_data, decay_factor, num_shots=100):
         if len(recent_shots) == 0:
             continue
             
-        # Apply the weighting to this small, recent subset of data
+        # Apply the weighting to this subset of data
         weighted_df = calculate_weights(recent_shots, decay_factor)
         
-        # Calculate the weighted average and standard deviation for key metrics
+        # Calculate the weighted average and standard deviation
         avg_carry = np.average(weighted_df["Carry Distance"], weights=weighted_df["weight"])
         carry_stddev = np.sqrt(np.average((weighted_df["Carry Distance"] - avg_carry)**2, weights=weighted_df["weight"]))
         
@@ -228,11 +236,11 @@ def analyze_club_performance(filtered_data, decay_factor, num_shots=100):
         avg_face_to_path = np.average(weighted_df["Face to Path"], weights=weighted_df["weight"])
         avg_spin_axis = np.average(weighted_df["Spin Axis"], weights=weighted_df["weight"])
 
-        # Find the maximum values directly from the `recent_shots` DataFrame
+        # Find the maximum values from the `recent_shots` DataFrame
         max_carry = recent_shots["Carry Distance"].max()
         max_total = recent_shots["Total Distance"].max()
         
-        # Create a dictionary of the calculated stats for the current club
+        # Create a dictionary of the calculated stats
         club_stats.append({
             "Club": club,
             "Avg Carry": avg_carry,
@@ -248,6 +256,7 @@ def analyze_club_performance(filtered_data, decay_factor, num_shots=100):
             "Count": len(recent_shots)
         })
 
+        # Create a dictionary of avg and max distances
         club_dist_only.append({
             "Club": club,
             "Avg Carry": avg_carry,
@@ -256,7 +265,7 @@ def analyze_club_performance(filtered_data, decay_factor, num_shots=100):
             "Max Total": max_total
         })
 
-    # Return the results as a DataFrame
+    # Return both dictionaries as dataframes
     return pd.DataFrame(club_stats), pd.DataFrame(club_dist_only)
 
 def main():
@@ -264,21 +273,17 @@ def main():
     print("Loading and processing Garmin R10 session data...")
     
     try:
-        # Load and process the data
+        # Load and prep data
         all_data = load_session_data(FOLDER_PATH)
         all_data['Date'] = pd.to_datetime(all_data['Date'])
-        
-        # Filter data for realistic shots first
         filtered_data = filter_club_data(all_data, CLUB_RANGES)
         
-        # Analyze performance using the new function
+        # Analyze performance and round data to whole numbers
         club_stats, club_dist_only = analyze_club_performance(filtered_data, DECAY_FACTOR, NUM_CLUB_SHOTS)
-        
-        # Round all numeric columns to whole numbers (0 decimal places)
         club_stats = club_stats.round(0)
         club_dist_only = club_dist_only.round(0)
 
-        # Use ExcelWriter to save both dataframes to a single file with two sheets
+        # Save both dataframes to Excel
         with pd.ExcelWriter(OUTPUT_FILE) as writer:
             # First sheet: Distances only
             club_dist_only.to_excel(writer, sheet_name='Distances Only', index=False)
@@ -286,13 +291,13 @@ def main():
             # Second sheet: All stats
             club_stats.to_excel(writer, sheet_name='All Stats', index=False)
         
-        print(f"Success! Club yardages saved to {OUTPUT_FILE} with two tabs.")
+        print(f"Club yardages saved to {OUTPUT_FILE} with two tabs.")
         
     except Exception as e:
         print(f"Error processing data: {str(e)}")
 
 if __name__ == "__main__":
-    # Configuration - users should modify these paths
+    # Configuration - modify these paths
     FOLDER_PATH = "/Users/hayde/OneDrive/Golf Practice/Driving Range"
     OUTPUT_FILE = "/Users/hayde/OneDrive/Golf Practice/club_yardages.xlsx"
 
