@@ -37,8 +37,8 @@ A Python script that processes driving range session data from Garmin R10 launch
 
 2. **Installation**:
    ```bash
-   git clone https://github.com/HaydenBussard/r10-data-analyzer.git
-   cd r10-data-analyzer
+   git clone https://github.com/HaydenBussard/r10_data_analyzer.git
+   cd r10_data_analyzer
    pip install -r requirements.txt
 
 3. **Configuration**:
