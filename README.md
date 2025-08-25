@@ -2,8 +2,8 @@
 
 A Python script that processes driving range session data from Garmin R10 launch monitors, calculating weighted averages and performance metrics.
 
-![Range Data Analyzer Example](images/example_output_phone.png)
-![Range Data Full Analysis](images/example_all_data.png)
+<img src="images/example_output_phone.PNG" alt="Range Data Analyzer Example" width="300">
+<img src="images/example_all_data.png" alt="Full Analysis Example">
 
 ## Features
 
